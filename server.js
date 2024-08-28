@@ -1,44 +1,68 @@
-const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const express = require('express');
+const { Router, Request, Resposnse } = require('express')
 
-const usersFilePath = path.join(__dirname, 'data', 'users.json'); 
-const docsFilePath = path.join(__dirname, 'data', 'docs.json'); 
 
 
-const usersData = fs.readFileSync(usersFilePath, 'utf-8');
-const docsData = fs.readFileSync(docsFilePath, 'utf-8');
+function getUsers() {
+    const usersFilePath = path.join(__dirname, 'data', 'users.json'); 
+    const usersData = fs.readFileSync(usersFilePath, 'utf-8');
+    return JSON.parse(usersData);
+}
 
-const handleRequest = (request, response) => { 
-    switch (request.url) {
-        case '/users':
-            if (usersData) {
-                response.writeHead(200, { 'Content-Type': 'application/json' });
-                response.end(usersData);
-            } else {
-                response.writeHead(500, { 'Content-Type': 'text/plain' });
-                response.end('Erro ao carregar os dados de usuários.');
-            }
-            break;
-        case '/docs':
-            if (docsData) {
-                response.writeHead(200, { 'Content-Type': 'application/json' });
-                response.end(docsData);
-            } else {
-                response.writeHead(500, { 'Content-Type': 'text/plain' });
-                response.end('Erro ao carregar dados dos documentos.');
-            }
-            break;
-        default:
-            response.writeHead(404, { 'Content-Type': 'text/plain' });
-            response.end('404 Pagina nao encontrada');
+function getDocs() {
+    const docsFilePath = path.join(__dirname, 'data', 'docs.json'); 
+    const docsData = fs.readFileSync(docsFilePath, 'utf-8');
+    return JSON.parse(docsData);
+}
+
+const app = express();
+
+const route  = Router();
+
+app.get('/users', (req, res) => {
+    const users = getUsers();
+    res.json(users);
+});
+
+app.get('/user/:id', (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    const users = getUsers();
+    const user = users.find(u => u.id === id);
+
+    if (user) {
+        res.json(user);
+    } else {
+        res.status(404).send({ error: "Usuário não encontrado" });
     }
-};
+});
 
-const server = http.createServer(handleRequest);
+app.get('/docs', (req, res) => {
+    const docs = getDocs();
+    res.json(docs);
+});
+
+app.get('/doc/:id', (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    const docs = getDocs();
+    const doc = docs.find(u => u.id === id);
+
+    if (doc) {
+        res.json(doc);
+    } else {
+        res.status(404).send({ error: "Documento não encontrado" });
+    }
+});
+
+app.use((req, res) => {
+    res.status(404).send({ error: "Rota não encontrada" });
+});
 
 const port = 3300;
 
-server.listen(port, () => {
+app.use(route)
+
+app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
 });
