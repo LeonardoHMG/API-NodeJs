@@ -1,44 +1,77 @@
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
+const fs = require("fs");
+const path = require("path");
+const express = require("express");
 
-const usersFilePath = path.join(__dirname, 'data', 'users.json'); 
-const docsFilePath = path.join(__dirname, 'data', 'docs.json'); 
-
-
-const usersData = fs.readFileSync(usersFilePath, 'utf-8');
-const docsData = fs.readFileSync(docsFilePath, 'utf-8');
-
-const handleRequest = (request, response) => { 
-    switch (request.url) {
-        case '/users':
-            if (usersData) {
-                response.writeHead(200, { 'Content-Type': 'application/json' });
-                response.end(usersData);
-            } else {
-                response.writeHead(500, { 'Content-Type': 'text/plain' });
-                response.end('Erro ao carregar os dados de usuários.');
-            }
-            break;
-        case '/docs':
-            if (docsData) {
-                response.writeHead(200, { 'Content-Type': 'application/json' });
-                response.end(docsData);
-            } else {
-                response.writeHead(500, { 'Content-Type': 'text/plain' });
-                response.end('Erro ao carregar dados dos documentos.');
-            }
-            break;
-        default:
-            response.writeHead(404, { 'Content-Type': 'text/plain' });
-            response.end('404 Pagina nao encontrada');
-    }
-};
-
-const server = http.createServer(handleRequest);
+const app = express();
 
 const port = 3300;
 
-server.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
+const readFile = (file) => {
+  try {
+    const filePath = path.join(__dirname, "data", file);
+    const data = fs.readFileSync(filePath, "utf-8");
+    return JSON.parse(data);
+  } catch (error) {
+    console.error(
+      `Ocorreu um erro ao ler o dados do arquivo ${file}: ${error.message}`
+    );
+    return null;
+  }
+};
+
+const users = readFile("users.json");
+const docs = readFile("docs.json");
+
+app.get("/api/users", (req, res) => {
+  try {
+    res.status(200).json(users);
+  } catch (error) {
+    res.status(500).send({ error: "Erro ao carregar dados dos usuários" });
+  }
+});
+
+app.get("/api/user/:id", (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const user = users.find((u) => u.id === id);
+
+    if (user) {
+      res.status(200).json(user);
+    } else {
+      res.status(404).send({ error: "Usuário não encontrado" });
+    }
+  } catch (error) {
+    res.status(500).send("Erro ao carregar dados do usuário");
+  }
+});
+
+app.get("/api/docs", (req, res) => {
+  try {
+    res.status(200).json(docs);
+  } catch (error) {
+    res.status(500).send({ error: "Erro ao carregar dados dos documentos" });
+  }
+});
+
+app.get("/api/doc/:id", (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const doc = docs.find((u) => u.id === id);
+
+    if (doc) {
+      res.status(200).json(doc);
+    } else {
+      res.status(404).send({ error: "Documento não encontrado" });
+    }
+  } catch (error) {
+    res.status(500).send("Erro ao carregar dados do documento");
+  }
+});
+
+app.use((req, res) => {
+  res.status(404).send({ error: "Rota não encontrada" });
+});
+
+app.listen(port, () => {
+  console.log(`Server running at http://localhost:${port}`);
 });
